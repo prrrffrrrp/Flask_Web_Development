@@ -7,5 +7,9 @@
 {% endblock %}
 {% block page_content %}
 <h4>Your browser is {{user_agent}}</h4>
+
+<p>The local date and time is {{moment(current_time).format('LLLL')}}.</p>
+<p>That was {{moment(current_time).fromNow(refresh=True)}}</p>
+
 {% endblock %}
 
