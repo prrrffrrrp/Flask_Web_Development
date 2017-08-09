@@ -1,19 +1,61 @@
-from flask import Flask, request, render_template, session, redirect, url_for,\
-    flash
+import os
+from flask import Flask, render_template, session, redirect, url_for, flash
+from flask_script import Manager
 from datetime import datetime
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import Required
+from flask_sqlalchemy import SQLAlchemy
+
+# setting up sql database
+basedir = os.path.abspath(os.path.dirname(__file__))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret key'
+# Setting up database
+app.config['SQLALCHEMY_DATABASE_URI'] =\
+    'sqlite:///' + os.path.join(basedir, 'data.sqlite')
+app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
+# UserWarning: SQLALCHEMY_TRACK_MODIFICATIONS adds significant overhead
+# and will be disabled by default in the future.
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+
+manager = Manager(app)
 bootstrap = Bootstrap(app)
 moment = Moment(app)
+db = SQLAlchemy(app)
+
+
+class Role(db.Model):
+    """Creation of a 'roles' table in the database"""
+
+    __tablename__ = 'roles'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64), unique=True)
+    users = db.relationship('User', backref='role', lazy='dynamic')
+
+    def __repr__(self):
+        return '<Role %r>' % self.name
+
+
+class User(db.Model):
+    """Creation of a 'users' table in database"""
+
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, index=True)
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+
+    def __repr__(self):
+        return '<User %r>' % self.username
 
 
 class NameForm(FlaskForm):
+    '''Creation of html form fields used in "index" function'''
+
     name = StringField('What is your name?', validators=[Required()])
     submit = SubmitField('Submit')
 
@@ -54,4 +96,5 @@ def internal_server_error(e):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    db.create_all()
+    manager.run()
