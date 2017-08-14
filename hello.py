@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, render_template, session, redirect, url_for, \
     flash
-from flask_script import Manager
+from flask_script import Manager, Shell
 from datetime import datetime
 from flask_bootstrap import Bootstrap
 from flask_moment import Moment
@@ -9,6 +9,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField
 from wtforms.validators import Required
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate, MigrateCommand
+from flask_mail import Mail
 
 # setting up sql database
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -22,12 +24,25 @@ app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 # UserWarning: SQLALCHEMY_TRACK_MODIFICATIONS adds significant overhead
 # and will be disabled by default in the future.
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['MAIL_SERVER'] = 'smpt.googlemail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 
 
 manager = Manager(app)
 bootstrap = Bootstrap(app)
 moment = Moment(app)
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
+
+
+def make_shell_context():
+    return dict(app=app, db=db, User=User, Role=Role)
+
+manager.add_command("shell", Shell(make_context=make_shell_context))
+manager.add_command('db', MigrateCommand)
 
 
 class Role(db.Model):
@@ -103,5 +118,4 @@ def internal_server_error(e):
 
 
 if __name__ == '__main__':
-    db.create_all()
     manager.run()
