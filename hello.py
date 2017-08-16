@@ -11,7 +11,6 @@ from wtforms.validators import Required
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate, MigrateCommand
 from flask_mail import Mail, Message
-
 # setting up sql database
 basedir = os.path.abspath(os.path.dirname(__file__))
 
