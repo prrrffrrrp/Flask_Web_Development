@@ -11,8 +11,14 @@ Flasky - Login
 </div>
 <div class="col-md-4">
   {{ wtf.quick_form(form) }}
-</div>
 <br>
+  Forgot your password?
+  <a href="{{ url_for('auth.password_reset_request') }}">
+    Click here to reset password
+  </a>
+</p>
+
+
 <p>
   New user?
   <a href="{{ url_for('auth.register') }}">
@@ -20,10 +26,5 @@ Flasky - Login
   </a>
 </p>
 <p>
-  Forgot your password?
-  <a href="{{ url_for('auth.password_reset_request') }}">
-    Click here to reset password
-  </a>
-</p>
-
+</div>
 {% endblock %}
