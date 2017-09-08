@@ -2,14 +2,9 @@
 {% import "bootstrap/wtf.html" as wtf %}
 {% import "_macros.html" as macros %}
 
-{% block title %}
-  Index
-{% endblock %}
-{% block head %}
-  {{super()}}
-{% endblock %}
-{% block page_content %}
+{% block title %} Flasky {% endblock %}
 
+{% block page_content %}
 <div class="page_header">
   <h1>Hello,
     {% if current_user.is_authenticated %}
@@ -27,7 +22,15 @@
 </div>
 
 {% include '_posts.html' %}
+{% if pagination %}
 <div class="pagination">
   {{ macros.pagination_widget(pagination, '.index') }}
 </div>
+{% endif %}
 {% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ pagedown.include_pagedown() }}
+{% endblock %}
+
