@@ -4,9 +4,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from markdown import markdown
 import bleach
-from flask import current_app, request
+from flask import current_app, request, url_for
 from flask_login import UserMixin, AnonymousUserMixin
 from . import db, login_manager
+from app.exceptions import ValidationError
 
 
 class Permission:
@@ -75,10 +76,10 @@ class User(UserMixin, db.Model):
     avatar_hash = db.Column(db.String(32))
     posts = db.relationship('Post', backref='author', lazy='dynamic')
     followed = db.relationship('Follow',
-                                foreign_keys=[Follow.follower_id],
-                                backref=db.backref('follower', lazy='joined'),
-                                lazy='dynamic',
-                                cascade='all, delete-orphan')
+                               foreign_keys=[Follow.follower_id],
+                               backref=db.backref('follower', lazy='joined'),
+                               lazy='dynamic',
+                               cascade='all, delete-orphan')
     followers = db.relationship('Follow',
                                 foreign_keys=[Follow.followed_id],
                                 backref=db.backref('followed', lazy='joined'),
@@ -241,8 +242,19 @@ class User(UserMixin, db.Model):
         return Post.query.join(Follow, Follow.followed_id == Post.author_id)\
             .filter(Follow.follower_id == self.id)
 
-    def __repr__(self):
-        return '<User %r>' % self.username
+    def to_json(self):
+            json_user = {
+                'url': url_for('api.get_', id=self.id, _external=True),
+                'username': self.username,
+                'member_since': self.member_since,
+                'last_seen': self.last_seen,
+                'posts': url_for('api.get_user_posts', id=self.id,
+                                 _external=True),
+                'followed_posts': url_for('api.get_user_followed_posts',
+                                          id=self.id, _external=True),
+                'post_count': self.posts.count()
+            }
+            return json_user
 
     def generate_auth_token(self, expiration):
         s = Serializer(current_app.config['SECRET_KEY'],
@@ -257,6 +269,9 @@ class User(UserMixin, db.Model):
         except:
             return None
         return User.query.get(data['id'])
+
+    def __repr__(self):
+        return '<User %r>' % self.username
 
 
 class AnonymousUser(AnonymousUserMixin):
@@ -282,6 +297,27 @@ class Post(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     comments = db.relationship('Comment', backref='post', lazy='dynamic')
+
+    def to_json(self):
+        json_post = {
+            'url': url_for('api.get_post', id=self.id, _external=True),
+            'body': self.body,
+            'body_html': self.body_html,
+            'timestamp': self.timestamp,
+            'author': url_for('api.get_user', id=self.author_id,
+                              _external=True),
+            'comments': url_for('api.get_post_comments', id=self.id,
+                                _external=True),
+            'comment_count': self.comments.count()
+        }
+        return json_post
+
+    @staticmethod
+    def from_json(json_post):
+        body = json_post.get('body')
+        if body is None or body == '':
+            raise ValidationError('post does not have a body')
+        return Post(body=body)
 
     @staticmethod
     def generate_fake(count=100):
@@ -328,5 +364,22 @@ class Comment(db.Model):
         target.body_html = bleach.linkify(bleach.clean(
             markdown(value, output_format='html'),
             tags=allowed_tags, strip=True))
+
+    def to_json(self):
+        json_comment = {
+            'body': self.body,
+            'body_html': self.body_html,
+            'timestamp': self.timestamp,
+            'author': url_for('api.get_user', id=self.author_id,
+                              _external=True)
+        }
+        return json_comment
+
+    @staticmethod
+    def from_json(json_comment):
+        body = json_comment.get('body')
+        if body is None or body == '':
+            raise ValidationError('comment does not have a body')
+        return Comment(body=body)
 
 db.event.listen(Comment.body, 'set', Comment.on_changed_body)
