@@ -244,7 +244,7 @@ class User(UserMixin, db.Model):
 
     def to_json(self):
             json_user = {
-                'url': url_for('api.get_', id=self.id, _external=True),
+                'url': url_for('api.get_user', id=self.id, _external=True),
                 'username': self.username,
                 'member_since': self.member_since,
                 'last_seen': self.last_seen,
