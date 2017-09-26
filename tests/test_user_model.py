@@ -83,19 +83,19 @@ class UserModelTestCase(unittest.TestCase):
         u = User(email='john@example.com', password='cat')
         db.session.add(u)
         db.session.commit()
-        token = u.generate_email_change_token('susan@example.com')
+        token = u.generate_email_change_token('susan@example.org')
         self.assertTrue(u.change_email(token))
-        self.assertTrue(u.email == 'susan@example.com')
+        self.assertTrue(u.email == 'susan@example.org')
 
     def test_invalid_email_change_token(self):
         u1 = User(email='john@example.com', password='cat')
-        u2 = User(email='susan@example.com', password='dog')
+        u2 = User(email='susan@example.org', password='dog')
         db.session.add(u1)
         db.session.add(u2)
         db.session.commit()
-        token = u1.generate_email_change_token('david@example.com')
+        token = u1.generate_email_change_token('david@example.net')
         self.assertFalse(u2.change_email(token))
-        self.assertTrue(u2.email == 'susan@example.com')
+        self.assertTrue(u2.email == 'susan@example.org')
 
     def test_duplicate_email_change_token(self):
         u1 = User(email='john@example.com', password='cat')
@@ -187,3 +187,13 @@ class UserModelTestCase(unittest.TestCase):
         db.session.delete(u2)
         db.session.commit()
         self.assertTrue(Follow.query.count() == 1)
+
+    def test_to_json(self):
+        u = User(email='john@example.com', password='cat')
+        db.session.add(u)
+        db.session.commit()
+        json_user = u.to_json()
+        expected_keys = ['url', 'username', 'member_since', 'last_seen',
+                         'posts', 'followed_posts', 'post_count']
+        self.assertEqual(sorted(json_user.keys()), sorted(expected_keys))
+        self.assertTrue('api/v1.0/users/' in json_user['url'])
